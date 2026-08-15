@@ -1,7 +1,7 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i bash -p nix-update curl jq
 
-set -eou pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
@@ -10,7 +10,7 @@ curl_github() {
   if [[ -n "${GITHUB_TOKEN:-}" ]]; then
     auth=(--user ":$GITHUB_TOKEN")
   fi
-  curl --fail --location --silent --show-error "${auth[@]}" "$@"
+  curl --fail-with-body --location --silent --show-error "${auth[@]}" "$@"
 }
 
 releaseInfo="$(curl_github "https://api.github.com/repos/stashapp/stash/releases/latest")"
@@ -32,3 +32,5 @@ grep -qxF "  appDate = \"$appDate\";" "$SCRIPT_DIR/package.nix"
 grep -qxF "  gitHash = \"$gitHash\";" "$SCRIPT_DIR/package.nix"
 
 nix-update "${UPDATE_NIX_ATTR_PATH:-stash}" --subpackage frontend --version "$version"
+
+grep -qxF "  version = \"$version\";" "$SCRIPT_DIR/package.nix"
