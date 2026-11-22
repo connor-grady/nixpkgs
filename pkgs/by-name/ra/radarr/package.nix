@@ -84,6 +84,10 @@ buildDotnetModule (finalAttrs: {
 
   __darwinAllowLocalNetworking = true; # for tests
 
+  sandboxProfile = lib.optionalString stdenvNoCC.buildPlatform.isDarwin ''
+    (allow mach-lookup (global-name "com.apple.trustd"))
+  '';
+
   __structuredAttrs = true; # for Copyright property that contains spaces
 
   executables = [ "Radarr" ];
