@@ -131,7 +131,9 @@ buildDotnetModule {
   __darwinAllowLocalNetworking = true; # for tests
 
   sandboxProfile = ''
-    (allow mach-lookup (global-name "com.apple.trustd"))
+    (allow mach-lookup
+      (global-name "com.apple.SystemConfiguration.configd")
+      (global-name "com.apple.trustd"))
   '';
 
   __structuredAttrs = true; # for Copyright property that contains spaces
