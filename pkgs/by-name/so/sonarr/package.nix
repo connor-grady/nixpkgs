@@ -130,6 +130,10 @@ buildDotnetModule {
 
   __darwinAllowLocalNetworking = true; # for tests
 
+  sandboxProfile = ''
+    (allow mach-lookup (global-name "com.apple.trustd"))
+  '';
+
   __structuredAttrs = true; # for Copyright property that contains spaces
 
   executables = [ "Sonarr" ];
@@ -174,10 +178,6 @@ buildDotnetModule {
     # makes real HTTP requests
     "FullyQualifiedName!~NzbDrone.Core.Test.UpdateTests.UpdatePackageProviderFixture"
     "FullyQualifiedName!~NzbDrone.Core.Test.TvTests.RefreshEpisodeServiceFixture"
-  ]
-  ++ lib.optionals stdenvNoCC.buildPlatform.isDarwin [
-    # fails on macOS
-    "FullyQualifiedName!~NzbDrone.Core.Test.Http.HttpProxySettingsProviderFixture"
   ];
 
   disabledTests = [
