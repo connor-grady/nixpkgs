@@ -55,7 +55,7 @@ package_attrs = json.loads(subprocess.run(
         "--apply", """p: {
           dir = dirOf p.meta.position;
           version = p.version;
-          sourceHash = p.src.src.outputHash;
+          sourceHash = p.src.outputHash;
           yarnHash = p.yarnOfflineCache.outputHash;
         }""",
         "--",

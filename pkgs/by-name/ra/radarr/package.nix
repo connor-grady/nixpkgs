@@ -17,30 +17,24 @@
   python3Packages,
   nix,
   prefetch-yarn-deps,
-  applyPatches,
 }:
 let
-  version = "7.0.3.10918";
-  # The dotnet8 compatibility patches also change `yarn.lock`, so we must pass
-  # the already patched lockfile to `fetchYarnDeps`.
-  src = applyPatches {
-    src = fetchFromGitHub {
-      owner = "Radarr";
-      repo = "Radarr";
-      tag = "v${version}";
-      hash = "sha256-YpAIa5Ljhk8x9nGOqihSWuLV29aCp4x+2tOYL7CGLKI=";
-    };
-    postPatch = ''
-      mv src/NuGet.config NuGet.Config
-      substituteInPlace global.json \
-        --replace-fail '10.0.404' '10.0.403'
-    '';
-  };
   rid = dotnetCorePackages.systemToDotnetRid stdenvNoCC.hostPlatform.system;
 in
-buildDotnetModule {
+buildDotnetModule (finalAttrs: {
   pname = "radarr";
-  inherit version src;
+  version = "7.0.3.10918";
+
+  src = fetchFromGitHub {
+    owner = "Radarr";
+    repo = "Radarr";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-YpAIa5Ljhk8x9nGOqihSWuLV29aCp4x+2tOYL7CGLKI=";
+  };
+
+  postPatch = ''
+    mv src/NuGet.config NuGet.Config
+  '';
 
   strictDeps = true;
   nativeBuildInputs = [
@@ -51,7 +45,7 @@ buildDotnetModule {
   ];
 
   yarnOfflineCache = fetchYarnDeps {
-    yarnLock = "${src}/yarn.lock";
+    yarnLock = "${finalAttrs.src}/yarn.lock";
     hash = "sha256-LDgHV7ztH+fLDMgRYnUMTG6ymixikpzxoV+tnOuzCU8=";
   };
 
@@ -84,6 +78,10 @@ buildDotnetModule {
 
   doCheck = true;
 
+  preCheck = lib.optionalString withFFmpeg ''
+    ln -sf -- "$ffprobe" "_tests/net10.0/${rid}/ffprobe"
+  '';
+
   __darwinAllowLocalNetworking = true; # for tests
 
   __structuredAttrs = true; # for Copyright property that contains spaces
@@ -102,16 +100,20 @@ buildDotnetModule {
     "src/NzbDrone.Host.Test/Radarr.Host.Test.csproj"
     "src/NzbDrone.Libraries.Test/Radarr.Libraries.Test.csproj"
     "src/NzbDrone.Mono.Test/Radarr.Mono.Test.csproj"
-    "src/NzbDrone.Test.Common/Radarr.Test.Common.csproj"
+    "src/NzbDrone.Update.Test/Radarr.Update.Test.csproj"
+  ];
+
+  # https://github.com/NixOS/nixpkgs/pull/491217
+  dotnetTestFlags = lib.optionals stdenvNoCC.buildPlatform.isDarwin [
+    "--environment:DOTNET_SYSTEM_NET_DISABLEIPV6=1"
   ];
 
   dotnetFlags = [
     "--property:TargetFramework=net10.0"
     "--property:EnableAnalyzers=false"
-    "--property:SentryUploadSymbols=false" # Fix Sentry upload failed warnings
     # Override defaults in src/Directory.Build.props that use current time.
-    "--property:Copyright=Copyright 2014-2025 radarr.video (GNU General Public v3)"
-    "--property:AssemblyVersion=${version}"
+    "--property:Copyright=Copyright radarr.video (${finalAttrs.meta.license.fullName})"
+    "--property:AssemblyVersion=${finalAttrs.version}"
     "--property:AssemblyConfiguration=master"
     "--property:RuntimeIdentifier=${rid}"
   ];
@@ -176,7 +178,7 @@ buildDotnetModule {
   meta = {
     description = "Usenet/BitTorrent movie downloader";
     homepage = "https://radarr.video";
-    changelog = "https://github.com/Radarr/Radarr/releases/tag/v${version}";
+    changelog = "https://github.com/Radarr/Radarr/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [
       purcell
@@ -186,4 +188,4 @@ buildDotnetModule {
     mainProgram = "Radarr";
     # platforms inherited from dotnet-sdk.
   };
-}
+})
